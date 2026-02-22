@@ -16,10 +16,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          # No cache: npm here — requires package-lock.json to exist first.
+          # After your first local `npm install`, commit package-lock.json
+          # and then restore this line: cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
