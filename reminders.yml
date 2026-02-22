@@ -1,0 +1,28 @@
+name: Daily Booking Reminders
+
+on:
+  schedule:
+    # Runs every day at 9:00 AM UTC — adjust to your timezone
+    - cron: "0 9 * * *"
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger GAS Reminder Function
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://script.google.com/macros/s/${{ secrets.GAS_DEPLOYMENT_ID }}/exec?action=sendReminders&secret=${{ secrets.GAS_SECRET_KEY }}")
+          echo "Response code: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "❌ Reminder trigger failed with status $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Reminders triggered successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Reminder job failed at $(date)"
+          # Add Slack/Discord webhook here if desired
