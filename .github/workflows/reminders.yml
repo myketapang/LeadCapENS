@@ -12,17 +12,28 @@ jobs:
     steps:
       - name: Trigger GAS Reminder Function
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          # -L follows the 302 redirect that Google Apps Script always issues
+          RESPONSE=$(curl -s -L -o /tmp/gas_response.txt -w "%{http_code}" \
             "https://script.google.com/macros/s/${{ secrets.GAS_DEPLOYMENT_ID }}/exec?action=sendReminders&secret=${{ secrets.GAS_SECRET_KEY }}")
+
           echo "Response code: $RESPONSE"
+          echo "Response body: $(cat /tmp/gas_response.txt)"
+
           if [ "$RESPONSE" != "200" ]; then
             echo "❌ Reminder trigger failed with status $RESPONSE"
             exit 1
           fi
+
+          # Double-check the JSON body doesn't contain an error field
+          if grep -q '"error"' /tmp/gas_response.txt; then
+            echo "❌ GAS returned an error — check your REMINDER_SECRET and deployment ID"
+            exit 1
+          fi
+
           echo "✅ Reminders triggered successfully"
 
       - name: Notify on failure
         if: failure()
         run: |
           echo "Reminder job failed at $(date)"
-          # Add Slack/Discord webhook here if desired
+          # Optional: add a Slack/Discord webhook call here
